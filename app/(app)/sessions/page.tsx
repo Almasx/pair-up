@@ -82,7 +82,7 @@ export default function SessionsPage() {
                     {interviewTypeLabels[session.interviewType]} &middot;{" "}
                     {formatDate(session.scheduledAt)} at{" "}
                     {formatTime(
-                      `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
+                      `${String(scheduled.getHours()).padStart(2, "0")}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
                     )}{" "}
                     &middot; {session.duration}m
                   </p>

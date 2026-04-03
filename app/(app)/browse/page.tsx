@@ -37,7 +37,12 @@ export default function BrowsePage() {
       return (
         u.name.toLowerCase().includes(q) ||
         u.topics.some((t) => t.toLowerCase().includes(q)) ||
-        u.bio?.toLowerCase().includes(q)
+        u.bio?.toLowerCase().includes(q) ||
+        u.interviewTypes.some(
+          (t) =>
+            t.toLowerCase().includes(q) ||
+            interviewTypeLabels[t].toLowerCase().includes(q)
+        )
       );
     });
 

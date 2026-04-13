@@ -24,19 +24,23 @@ type ApiSession = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<ApiSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${BASE}/sessions/`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : []))
       .then(setSessions)
-      .catch(() => setSessions([]));
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div>
       <h1 className="text-[28px] font-semibold tracking-tight mb-1">Home</h1>
       <p className="text-[15px] text-muted-foreground mb-10">
-        {sessions.length > 0
+        {loading
+          ? "Loading…"
+          : sessions.length > 0
           ? `${sessions.length} upcoming session${sessions.length > 1 ? "s" : ""}`
           : "No upcoming sessions"}
       </p>

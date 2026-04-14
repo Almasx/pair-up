@@ -1,3 +1,5 @@
+import type { UserRole } from "@/lib/types";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
 export type AuthUser = {
@@ -5,6 +7,7 @@ export type AuthUser = {
   full_name: string;
   email: string;
   timezone: string;
+  role: UserRole;
   experience?: string;
   bio?: string;
   cal_com_link?: string;
@@ -31,6 +34,7 @@ export const authApi = {
     email: string;
     password: string;
     timezone: string;
+    role: UserRole;
     experience?: string;
     cal_com_link?: string;
   }) => post<{ user: AuthUser }>("/auth/signup", payload),

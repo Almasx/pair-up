@@ -3,9 +3,17 @@ from src.supabase_client import get_supabase
 
 
 def signup(
-    full_name, email, password, timezone, experience=None, bio=None, cal_com_link=None
+    full_name, email, password, timezone, role, experience=None, bio=None, cal_com_link=None
 ):
     """Create Supabase Auth user + insert into users table. Returns (user_dict, error)."""
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id FROM roles WHERE name = %s", (role,))
+    role_row = cur.fetchone()
+    if not role_row:
+        return None, f"Invalid role: {role}"
+    role_id = role_row["id"]
+
     sb = get_supabase()
     try:
         response = sb.auth.sign_up(
@@ -37,14 +45,12 @@ def signup(
 
     user_id = response.user.id
 
-    db = get_db()
-    cur = db.cursor()
     cur.execute(
         """
-        INSERT INTO users (id, full_name, email, timezone, experience, bio, cal_com_link)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO users (id, full_name, email, timezone, experience, bio, cal_com_link, role_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (user_id, full_name, email, timezone, experience, bio, cal_com_link),
+        (user_id, full_name, email, timezone, experience, bio, cal_com_link, role_id),
     )
     db.commit()
 
@@ -59,6 +65,7 @@ def signup(
             "experience": experience,
             "bio": bio,
             "cal_com_link": cal_com_link,
+            "role": role,
         },
     }, None
 

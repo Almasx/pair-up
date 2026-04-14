@@ -43,10 +43,11 @@ def signup_route():
     email = data.get("email")
     password = data.get("password")
     timezone = data.get("timezone")
+    role = data.get("role")
 
-    if not all([full_name, email, password, timezone]):
+    if not all([full_name, email, password, timezone, role]):
         return (
-            jsonify({"error": "full_name, email, password, and timezone are required"}),
+            jsonify({"error": "full_name, email, password, timezone, and role are required"}),
             400,
         )
 
@@ -55,6 +56,7 @@ def signup_route():
         email=email,
         password=password,
         timezone=timezone,
+        role=role,
         experience=data.get("experience"),
         bio=data.get("bio"),
         cal_com_link=data.get("cal_com_link"),

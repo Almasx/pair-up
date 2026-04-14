@@ -32,13 +32,14 @@ def get_users(interview_type_id=None, timezone=None, experience=None):
             u.experience,
             u.bio,
             u.cal_com_link,
-            u.role,
+            r.name AS role,
             array_agg(DISTINCT it.name) AS interview_types
         FROM users u
+        LEFT JOIN roles r ON r.id = u.role_id
         LEFT JOIN user_interview_types uit ON uit.user_id = u.id
         LEFT JOIN interview_types it ON it.id = uit.interview_type_id
         {where_clause}
-        GROUP BY u.id
+        GROUP BY u.id, r.name
         ORDER BY u.full_name
         """,
         params,
@@ -61,11 +62,26 @@ def get_topics():
     return [dict(r) for r in cur.fetchall()]
 
 
+def get_roles():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, name FROM roles ORDER BY name")
+    return [dict(r) for r in cur.fetchall()]
+
+
 def get_me(user_id):
     db = get_db()
     cur = db.cursor()
 
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cur.execute(
+        """
+        SELECT u.*, r.name AS role
+        FROM users u
+        LEFT JOIN roles r ON r.id = u.role_id
+        WHERE u.id = %s
+        """,
+        (user_id,),
+    )
     row = cur.fetchone()
     if not row:
         return None
@@ -121,8 +137,14 @@ def update_me(user_id, data):
     db = get_db()
     cur = db.cursor()
 
-    allowed = ("full_name", "bio", "timezone", "experience", "cal_com_link", "role")
+    allowed = ("full_name", "bio", "timezone", "experience", "cal_com_link")
     fields = {col: data[col] for col in allowed if col in data}
+
+    if "role" in data:
+        cur.execute("SELECT id FROM roles WHERE name = %s", (data["role"],))
+        role_row = cur.fetchone()
+        if role_row:
+            fields["role_id"] = role_row["id"]
 
     if fields:
         set_clause = ", ".join(f"{col} = %s" for col in fields)

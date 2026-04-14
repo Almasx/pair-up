@@ -47,6 +47,6 @@ __pycache__/
 
 # virtual environments
 .venv/
-
+/source/venv
 # claude
 /.superpowers

@@ -8,8 +8,24 @@ import type { UserRole } from "@/lib/types";
 import { ArrowLeft, ArrowRight, Calendar, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authApi } from "@/lib/services/auth";
+import { profileApi, type Role } from "@/lib/services/profile";
+
+const roleDisplay: Record<UserRole, { label: string; description: string }> = {
+  interviewee: {
+    label: "I want to practice",
+    description: "Find interviewers who can run mock sessions for you",
+  },
+  interviewer: {
+    label: "I can run interviews",
+    description: "Help peers prep by conducting structured mock interviews",
+  },
+  both: {
+    label: "Both",
+    description: "Give and get — swap roles depending on the session",
+  },
+};
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -54,24 +70,6 @@ const topicOptions = [
   "Brain Teasers",
 ];
 
-const roles: { id: UserRole; label: string; description: string }[] = [
-  {
-    id: "interviewee",
-    label: "I want to practice",
-    description: "Find interviewers who can run mock sessions for you",
-  },
-  {
-    id: "interviewer",
-    label: "I can run interviews",
-    description: "Help peers prep by conducting structured mock interviews",
-  },
-  {
-    id: "both",
-    label: "Both",
-    description: "Give and get — swap roles depending on the session",
-  },
-];
-
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -81,6 +79,12 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState("");
+
+  const [roles, setRoles] = useState<Role[]>([]);
+
+  useEffect(() => {
+    profileApi.getRoles().then(setRoles).catch(() => {});
+  }, []);
 
   // Step 2
   const [role, setRole] = useState<UserRole | "">("");
@@ -109,11 +113,15 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
     try {
+      if (!role) {
+        throw new Error("Please select a role");
+      }
       await authApi.signup({
         full_name: name,
         email,
         password,
         timezone,
+        role,
         experience: experience || undefined,
         cal_com_link: withSchedulingUrl && schedulingUrl ? schedulingUrl : undefined,
       });
@@ -220,10 +228,10 @@ export default function SignupPage() {
               {roles.map((r) => (
                 <button
                   key={r.id}
-                  onClick={() => setRole(r.id)}
+                  onClick={() => setRole(r.name)}
                   className={cn(
                     "text-left px-4 py-4 rounded-xl border transition-all cursor-pointer",
-                    role === r.id
+                    role === r.name
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card hover:border-foreground/30"
                   )}
@@ -231,20 +239,20 @@ export default function SignupPage() {
                   <p
                     className={cn(
                       "text-[14px] font-semibold mb-0.5",
-                      role === r.id ? "text-background" : "text-foreground"
+                      role === r.name ? "text-background" : "text-foreground"
                     )}
                   >
-                    {r.label}
+                    {roleDisplay[r.name].label}
                   </p>
                   <p
                     className={cn(
                       "text-[13px]",
-                      role === r.id
+                      role === r.name
                         ? "text-background/70"
                         : "text-muted-foreground"
                     )}
                   >
-                    {r.description}
+                    {roleDisplay[r.name].description}
                   </p>
                 </button>
               ))}

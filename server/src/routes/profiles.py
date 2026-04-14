@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, g
 
 from src.middleware.auth import require_auth
-from src.services.profile_service import get_users, get_me, update_me, get_topics, get_interview_types
+from src.services.profile_service import get_users, get_me, update_me, get_topics, get_interview_types, get_roles
 
 profiles_bp = Blueprint("profiles", __name__)
 
@@ -24,6 +24,11 @@ def list_interview_types():
 @profiles_bp.route("/topics", methods=["GET"])
 def list_topics():
     return jsonify(get_topics()), 200
+
+
+@profiles_bp.route("/roles", methods=["GET"])
+def list_roles():
+    return jsonify(get_roles()), 200
 
 
 @profiles_bp.route("/me", methods=["GET"])

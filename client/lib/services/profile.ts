@@ -1,3 +1,5 @@
+import type { UserRole } from "@/lib/types";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
 export type UpcomingSession = {
@@ -14,6 +16,11 @@ export type InterviewType = {
   name: string;
 };
 
+export type Role = {
+  id: string;
+  name: UserRole;
+};
+
 export type Topic = {
   id: string;
   name: string;
@@ -28,7 +35,7 @@ export type ProfileData = {
   experience: string;
   bio: string;
   cal_com_link: string;
-  role: string;
+  role: UserRole;
   interview_types: string[];
   topics: Topic[];
   upcoming_sessions: UpcomingSession[];
@@ -62,6 +69,8 @@ export const profileApi = {
   getInterviewTypes: () => apiFetch<InterviewType[]>("/profiles/interview-types"),
 
   getTopics: () => apiFetch<Topic[]>("/profiles/topics"),
+
+  getRoles: () => apiFetch<Role[]>("/profiles/roles"),
 
   getUsers: () => apiFetch<ProfileData[]>("/profiles/"),
 };

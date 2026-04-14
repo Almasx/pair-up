@@ -5,10 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { profileApi, type ProfileData, type Topic, type InterviewType } from "@/lib/services/profile";
+import { profileApi, type ProfileData, type Topic, type InterviewType, type Role } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
 import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
-import type { Difficulty } from "@/lib/types";
+import type { Difficulty, UserRole } from "@/lib/types";
+
+const roleDisplay: Record<UserRole, string> = {
+  interviewee: "I want to practice",
+  interviewer: "I can run interviews",
+  both: "Interviewer and Interviewee",
+};
 import { ExternalLink, Link2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +35,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [allInterviewTypes, setAllInterviewTypes] = useState<InterviewType[]>([]);
   const [allTopics, setAllTopics] = useState<Topic[]>([]);
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -42,13 +49,15 @@ export default function ProfilePage() {
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [experience, setExperience] = useState<Difficulty>("intermediate");
   const [schedulingUrl, setSchedulingUrl] = useState("");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("both");
 
   useEffect(() => {
-    Promise.all([profileApi.getMe(), profileApi.getTopics(), profileApi.getInterviewTypes()])
-      .then(([data, topics, interviewTypes]) => {
+    Promise.all([profileApi.getMe(), profileApi.getTopics(), profileApi.getInterviewTypes(), profileApi.getRoles()])
+      .then(([data, topics, interviewTypes, roles]) => {
         setProfile(data);
         setAllTopics(topics);
         setAllInterviewTypes(interviewTypes);
+        setAllRoles(roles);
         setName(data.full_name);
         setBio(data.bio ?? "");
         setTimezone(data.timezone ?? "");
@@ -56,6 +65,7 @@ export default function ProfilePage() {
         setSelectedTopicIds((data.topics ?? []).map((t) => t.id));
         setExperience((data.experience as Difficulty) ?? "intermediate");
         setSchedulingUrl(data.cal_com_link ?? "");
+        setSelectedRole(data.role ?? "both");
       })
       .catch(() => setError("Failed to load profile"))
       .finally(() => setLoading(false));
@@ -70,6 +80,7 @@ export default function ProfilePage() {
     setSelectedTopicIds((profile.topics ?? []).map((t) => t.id));
     setExperience((profile.experience as Difficulty) ?? "intermediate");
     setSchedulingUrl(profile.cal_com_link ?? "");
+    setSelectedRole(profile.role ?? "both");
     setEditing(true);
   }
 
@@ -84,6 +95,7 @@ export default function ProfilePage() {
         topic_ids: selectedTopicIds,
         experience,
         cal_com_link: schedulingUrl,
+        role: selectedRole,
       });
       setProfile(updated);
       setEditing(false);
@@ -193,6 +205,27 @@ export default function ProfilePage() {
         {editing ? (
           <div className="space-y-6">
             <div>
+              <label className="text-[13px] font-medium block mb-2">Role</label>
+              <div className="flex flex-col gap-2">
+                {allRoles.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setSelectedRole(r.name)}
+                    className={cn(
+                      "text-left px-4 py-3 rounded-xl border transition-all cursor-pointer",
+                      selectedRole === r.name
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-card hover:border-foreground/30"
+                    )}
+                  >
+                    <p className={cn("text-[13px] font-medium", selectedRole === r.name ? "text-background" : "text-foreground")}>
+                      {roleDisplay[r.name]}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <label className="text-[13px] font-medium block mb-2">
                 Interview types
               </label>
@@ -248,6 +281,12 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {profile.role && (
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-1.5">Role</p>
+                <p className="text-[14px] font-medium">{roleDisplay[profile.role]}</p>
+              </div>
+            )}
             {profile.interview_types.length > 0 && (
               <div>
                 <p className="text-[12px] text-muted-foreground mb-1.5">

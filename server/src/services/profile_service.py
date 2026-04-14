@@ -47,6 +47,20 @@ def get_users(interview_type_id=None, timezone=None, experience=None):
     return [dict(row) for row in cur.fetchall()]
 
 
+def get_interview_types():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, name FROM interview_types ORDER BY name")
+    return [dict(r) for r in cur.fetchall()]
+
+
+def get_topics():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id, name, interview_type_id FROM topics ORDER BY name")
+    return [dict(r) for r in cur.fetchall()]
+
+
 def get_me(user_id):
     db = get_db()
     cur = db.cursor()
@@ -67,15 +81,16 @@ def get_me(user_id):
     )
     profile["interview_types"] = [r["name"] for r in cur.fetchall()]
 
-    try:
-        cur.execute(
-            "SELECT topic_name FROM user_topics WHERE user_id = %s",
-            (user_id,),
-        )
-        profile["topics"] = [r["topic_name"] for r in cur.fetchall()]
-    except Exception:
-        db.rollback()
-        profile["topics"] = []
+    cur.execute(
+        """
+        SELECT t.id, t.name FROM topics t
+        JOIN user_topics ut ON ut.topic_id = t.id
+        WHERE ut.user_id = %s
+        ORDER BY t.name
+        """,
+        (user_id,),
+    )
+    profile["topics"] = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
 
     cur.execute(
         """
@@ -124,12 +139,12 @@ def update_me(user_id, data):
                 (user_id, name),
             )
 
-    if "topics" in data:
+    if "topic_ids" in data:
         cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
-        for topic in data["topics"]:
+        for topic_id in data["topic_ids"]:
             cur.execute(
-                "INSERT INTO user_topics (user_id, topic_name) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                (user_id, topic),
+                "INSERT INTO user_topics (user_id, topic_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                (user_id, topic_id),
             )
 
     db.commit()

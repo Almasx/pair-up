@@ -9,6 +9,17 @@ export type UpcomingSession = {
   partner_name: string;
 };
 
+export type InterviewType = {
+  id: string;
+  name: string;
+};
+
+export type Topic = {
+  id: string;
+  name: string;
+  interview_type_id: string;
+};
+
 export type ProfileData = {
   id: string;
   full_name: string;
@@ -19,7 +30,7 @@ export type ProfileData = {
   cal_com_link: string;
   role: string;
   interview_types: string[];
-  topics: string[];
+  topics: Topic[];
   upcoming_sessions: UpcomingSession[];
   created_at: string;
 };
@@ -40,11 +51,17 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 export const profileApi = {
   getMe: () => apiFetch<ProfileData>("/profiles/me"),
 
-  updateMe: (body: Partial<ProfileData>) =>
+  updateMe: (body: Partial<ProfileData> & { topic_ids?: string[] }) =>
     apiFetch<ProfileData>("/profiles/me", {
       method: "PUT",
       body: JSON.stringify(body),
     }),
 
   getPublic: (userId: string) => apiFetch<ProfileData>(`/profiles/${userId}`),
+
+  getInterviewTypes: () => apiFetch<InterviewType[]>("/profiles/interview-types"),
+
+  getTopics: () => apiFetch<Topic[]>("/profiles/topics"),
+
+  getUsers: () => apiFetch<ProfileData[]>("/profiles/"),
 };

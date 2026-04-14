@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { profileApi, type ProfileData } from "@/lib/services/profile";
+import { profileApi, type ProfileData, type Topic, type InterviewType } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
 import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
 import type { Difficulty } from "@/lib/types";
@@ -23,24 +23,12 @@ const timezones = [
   { value: "Asia/Seoul", label: "Seoul (KST)" },
 ];
 
-const interviewTypes = [
-  { id: "technical", label: "Technical" },
-  { id: "behavioral", label: "Behavioral" },
-  { id: "case", label: "Case Study" },
-  { id: "product", label: "Product" },
-];
-
-const allTopics = [
-  "Data Structures", "Algorithms", "System Design", "Dynamic Programming",
-  "Machine Learning", "Product Sense", "Metrics", "Strategy",
-  "Market Sizing", "Profitability", "Go-to-Market", "Leadership",
-  "Conflict Resolution", "React", "Node.js", "API Design", "Python",
-  "SQL", "Statistics", "Brain Teasers",
-];
 
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [allInterviewTypes, setAllInterviewTypes] = useState<InterviewType[]>([]);
+  const [allTopics, setAllTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -51,20 +39,21 @@ export default function ProfilePage() {
   const [bio, setBio] = useState("");
   const [timezone, setTimezone] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [experience, setExperience] = useState<Difficulty>("intermediate");
   const [schedulingUrl, setSchedulingUrl] = useState("");
 
   useEffect(() => {
-    profileApi
-      .getMe()
-      .then((data) => {
+    Promise.all([profileApi.getMe(), profileApi.getTopics(), profileApi.getInterviewTypes()])
+      .then(([data, topics, interviewTypes]) => {
         setProfile(data);
+        setAllTopics(topics);
+        setAllInterviewTypes(interviewTypes);
         setName(data.full_name);
         setBio(data.bio ?? "");
         setTimezone(data.timezone ?? "");
         setSelectedTypes(data.interview_types ?? []);
-        setSelectedTopics(data.topics ?? []);
+        setSelectedTopicIds((data.topics ?? []).map((t) => t.id));
         setExperience((data.experience as Difficulty) ?? "intermediate");
         setSchedulingUrl(data.cal_com_link ?? "");
       })
@@ -78,7 +67,7 @@ export default function ProfilePage() {
     setBio(profile.bio ?? "");
     setTimezone(profile.timezone ?? "");
     setSelectedTypes(profile.interview_types ?? []);
-    setSelectedTopics(profile.topics ?? []);
+    setSelectedTopicIds((profile.topics ?? []).map((t) => t.id));
     setExperience((profile.experience as Difficulty) ?? "intermediate");
     setSchedulingUrl(profile.cal_com_link ?? "");
     setEditing(true);
@@ -92,7 +81,7 @@ export default function ProfilePage() {
         bio,
         timezone,
         interview_types: selectedTypes,
-        topics: selectedTopics,
+        topic_ids: selectedTopicIds,
         experience,
         cal_com_link: schedulingUrl,
       });
@@ -108,9 +97,9 @@ export default function ProfilePage() {
       prev.includes(id) ? prev.filter((t: string) => t !== id) : [...prev, id]
     );
 
-  const toggleTopic = (topic: string) =>
-    setSelectedTopics((prev: string[]) =>
-      prev.includes(topic) ? prev.filter((t: string) => t !== topic) : [...prev, topic]
+  const toggleTopic = (id: string) =>
+    setSelectedTopicIds((prev: string[]) =>
+      prev.includes(id) ? prev.filter((t: string) => t !== id) : [...prev, id]
     );
 
   if (loading) {
@@ -208,18 +197,18 @@ export default function ProfilePage() {
                 Interview types
               </label>
               <div className="flex flex-wrap gap-2">
-                {interviewTypes.map((type) => (
+                {allInterviewTypes.map((type) => (
                   <button
                     key={type.id}
-                    onClick={() => toggleType(type.id)}
+                    onClick={() => toggleType(type.name)}
                     className={cn(
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
-                      selectedTypes.includes(type.id)
+                      selectedTypes.includes(type.name)
                         ? "border-foreground bg-foreground text-background"
                         : "border-border text-muted-foreground hover:border-foreground/30"
                     )}
                   >
-                    {type.label}
+                    {type.name}
                   </button>
                 ))}
               </div>
@@ -242,16 +231,16 @@ export default function ProfilePage() {
               <div className="flex flex-wrap gap-2">
                 {allTopics.map((topic) => (
                   <button
-                    key={topic}
-                    onClick={() => toggleTopic(topic)}
+                    key={topic.id}
+                    onClick={() => toggleTopic(topic.id)}
                     className={cn(
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
-                      selectedTopics.includes(topic)
+                      selectedTopicIds.includes(topic.id)
                         ? "border-foreground bg-foreground text-background"
                         : "border-border text-muted-foreground hover:border-foreground/30"
                     )}
                   >
-                    {topic}
+                    {topic.name}
                   </button>
                 ))}
               </div>
@@ -268,9 +257,9 @@ export default function ProfilePage() {
                   {profile.interview_types.map((t) => (
                     <span
                       key={t}
-                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium"
+                      className="px-2 py-0.5 text-[12px] bg-muted rounded-md font-medium capitalize"
                     >
-                      {interviewTypeLabels[t] ?? t}
+                      {t}
                     </span>
                   ))}
                 </div>
@@ -292,10 +281,10 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-1.5">
                   {profile.topics.map((t) => (
                     <span
-                      key={t}
+                      key={t.id}
                       className="px-2 py-0.5 text-[12px] bg-muted rounded-md"
                     >
-                      {t}
+                      {t.name}
                     </span>
                   ))}
                 </div>

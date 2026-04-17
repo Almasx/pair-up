@@ -11,11 +11,20 @@ export type AuthUser = {
 };
 
 export const authApi = {
+  /**
+   * Fetch the currently authenticated user.
+   */
   me: () => get<{ user: AuthUser }>("/auth/me"),
 
+  /**
+   * Log in a user with email and password.
+   */
   login: (email: string, password: string) =>
     post<{ user: AuthUser }>("/auth/login", { email, password }),
 
+  /**
+   * Create a new user account.
+   */
   signup: (payload: {
     full_name: string;
     email: string;
@@ -25,5 +34,8 @@ export const authApi = {
     cal_com_link?: string;
   }) => post<{ user: AuthUser }>("/auth/signup", payload),
 
+  /**
+   * Log out the current user.
+   */
   logout: () => post<{ message: string }>("/auth/logout"),
 };

@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/ui/avatar";
 import { profilesApi, type ProfileUser } from "@/lib/services/profiles";
+import { useAuth } from "@/lib/context/auth";
 import { cn, difficultyLabels, interviewTypeLabels } from "@/lib/utils";
 import { ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -21,12 +22,21 @@ const emptyFilters: Filters = {
 };
 
 function buildScheduleUrl(
-  calComLink: string,
+  interviewerCalLink: string,
+  intervieweeCalLink: string | undefined,
   interviewType: string | null
 ): string {
-  if (!interviewType) return calComLink;
-  const separator = calComLink.includes("?") ? "&" : "?";
-  return `${calComLink}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
+  const interviewerUsername = interviewerCalLink.replace(/^https?:\/\/cal\.com\//, "");
+  const intervieweeUsername = intervieweeCalLink?.replace(/^https?:\/\/cal\.com\//, "");
+
+  const base =
+    intervieweeUsername
+      ? `https://cal.com/${interviewerUsername}+${intervieweeUsername}/30min`
+      : `https://cal.com/${interviewerUsername}`;
+
+  if (!interviewType) return base;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}metadata[interviewType]=${encodeURIComponent(interviewType)}`;
 }
 
 function FilterSection({
@@ -68,6 +78,7 @@ function FilterSection({
 }
 
 export default function BrowsePage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<ProfileUser[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -248,6 +259,7 @@ export default function BrowsePage() {
                     <a
                       href={buildScheduleUrl(
                         user.cal_com_link,
+                        currentUser?.cal_com_link ?? undefined,
                         filters.interviewTypes.length === 1
                           ? filters.interviewTypes[0]
                           : null

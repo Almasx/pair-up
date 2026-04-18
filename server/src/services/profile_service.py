@@ -1,12 +1,16 @@
 from src.db import get_db
 
 
-def get_users(interview_type_id=None, timezone=None, experience=None):
+def get_users(exclude_user_id=None, interview_type_id=None, timezone=None, experience=None):
     db = get_db()
     cur = db.cursor()
 
     conditions = []
     params = []
+
+    if exclude_user_id:
+        conditions.append("u.id != %s")
+        params.append(exclude_user_id)
 
     if interview_type_id:
         conditions.append("uit.interview_type_id = %s")
@@ -32,7 +36,6 @@ def get_users(interview_type_id=None, timezone=None, experience=None):
             u.experience,
             u.bio,
             u.cal_com_link,
-            u.role,
             array_agg(DISTINCT it.name) AS interview_types
         FROM users u
         LEFT JOIN user_interview_types uit ON uit.user_id = u.id
@@ -106,7 +109,7 @@ def update_me(user_id, data):
     db = get_db()
     cur = db.cursor()
 
-    allowed = ("full_name", "bio", "timezone", "experience", "cal_com_link", "role")
+    allowed = ("full_name", "bio", "timezone", "experience", "cal_com_link")
     fields = {col: data[col] for col in allowed if col in data}
 
     if fields:

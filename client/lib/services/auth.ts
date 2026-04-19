@@ -1,6 +1,4 @@
-import type { UserRole } from "@/lib/types";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL!;
+import { get, post } from "@/lib/services/api";
 
 export type AuthUser = {
   id: string;
@@ -13,22 +11,21 @@ export type AuthUser = {
   cal_com_link?: string;
 };
 
-async function post<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: body ? { "Content-Type": "application/json" } : {},
-    credentials: "include",
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Request failed");
-  return data as T;
-}
-
 export const authApi = {
+  /**
+   * Fetch the currently authenticated user.
+   */
+  me: () => get<{ user: AuthUser }>("/auth/me"),
+
+  /**
+   * Log in a user with email and password.
+   */
   login: (email: string, password: string) =>
     post<{ user: AuthUser }>("/auth/login", { email, password }),
 
+  /**
+   * Create a new user account.
+   */
   signup: (payload: {
     full_name: string;
     email: string;
@@ -41,5 +38,8 @@ export const authApi = {
     topic_ids?: string[];
   }) => post<{ user: AuthUser }>("/auth/signup", payload),
 
+  /**
+   * Log out the current user.
+   */
   logout: () => post<{ message: string }>("/auth/logout"),
 };

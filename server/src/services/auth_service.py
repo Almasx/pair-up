@@ -1,3 +1,6 @@
+import os
+import uuid
+
 from src.db import get_db
 from src.supabase_client import get_supabase
 
@@ -21,6 +24,7 @@ def signup(
 
     sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.sign_up(
             {
                 "email": email,
@@ -104,12 +108,9 @@ def signup(
 
 
 def login(email, password):
-    """Sign in with Supabase Auth, fetch profile from users table.
-
-    Returns (data_dict, error).
-    """
-    sb = get_supabase()
+    """Sign in with Supabase Auth, fetch profile from users table. Returns (data_dict, error)."""
     try:
+        sb = get_supabase()
         response = sb.auth.sign_in_with_password(
             {
                 "email": email,
@@ -141,8 +142,8 @@ def login(email, password):
 
 def logout(access_token):
     """Sign out from Supabase Auth. Returns (None, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         sb.auth.sign_out()
         return None, None
     except Exception as e:
@@ -151,8 +152,8 @@ def logout(access_token):
 
 def refresh(refresh_token):
     """Refresh the session. Returns (tokens_dict, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.refresh_session(refresh_token)
     except Exception as e:
         return None, str(e)

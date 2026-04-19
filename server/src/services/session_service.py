@@ -1,19 +1,56 @@
 from src.db import get_db
 
 
+def get_upcoming_sessions(user_id: str):
+    """Return upcoming confirmed sessions for the given user_id."""
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            s.id,
+            s.status,
+            s.scheduled_at,
+            s.meeting_link,
+            it.name AS interview_type,
+            interviewer.id   AS interviewer_id,
+            interviewer.full_name AS interviewer_name,
+            interviewer.email     AS interviewer_email,
+            interviewee.id   AS interviewee_id,
+            interviewee.full_name AS interviewee_name,
+            interviewee.email     AS interviewee_email
+        FROM sessions s
+        JOIN users interviewer ON interviewer.id = s.interviewer_id
+        JOIN users interviewee ON interviewee.id = s.interviewee_id
+        LEFT JOIN interview_types it ON it.id = s.interview_type_id
+        WHERE (s.interviewer_id = %s OR s.interviewee_id = %s)
+          AND s.status = 'confirmed'
+          AND s.scheduled_at > NOW()
+        ORDER BY s.scheduled_at ASC
+        """,
+        (user_id, user_id),
+    )
+
+    return cur.fetchall()
+
+
 def _get_user_id_by_email(cur, email: str):
+    """Return the user id for the given email using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM users WHERE email = %s", (email,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def _get_interview_type_id(cur, name: str):
+    """Return the interview type id for the given name using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM interview_types WHERE name = %s", (name,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def create_session(payload: dict):
+    """Insert a confirmed session from the webhook payload and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -47,6 +84,7 @@ def create_session(payload: dict):
 
 
 def reschedule_session(payload: dict):
+    """Update the scheduled_at time for the session identified by payload uid and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -61,6 +99,7 @@ def reschedule_session(payload: dict):
 
 
 def cancel_session(payload: dict):
+    """Mark the session identified by payload uid as cancelled and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -71,3 +110,100 @@ def cancel_session(payload: dict):
         (cal_booking_uid,),
     )
     db.commit()
+
+
+def save_feedback(
+    session_id: str,
+    from_user_id: str,
+    from_user_name: str,
+    to_user_id: str,
+    rating: int,
+    communication: int,
+    preparedness: int,
+    technical_skill: int,
+    strengths: str = "",
+    improvements: str = "",
+    notes: str = "",
+):
+    """Insert a feedback row and return the created record."""
+    db = get_db()
+    cur = db.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO session_feedback (
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING
+            id,
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+            created_at
+        """,
+        (
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+        ),
+    )
+    row = cur.fetchone()
+    db.commit()
+    return row
+
+
+def get_latest_feedback(session_id: str):
+    """Fetch the most recently submitted feedback for a session."""
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """
+        SELECT
+            id,
+            session_id,
+            from_user_id,
+            from_user_name,
+            to_user_id,
+            rating,
+            communication,
+            preparedness,
+            technical_skill,
+            strengths,
+            improvements,
+            notes,
+            created_at
+        FROM session_feedback
+        WHERE session_id = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (session_id,),
+    )
+    return cur.fetchone()

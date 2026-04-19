@@ -42,7 +42,6 @@ const timezones = [
 
 
 export default function SignupPage() {
-  const router = useRouter();
   const [step, setStep] = useState(1);
 
   // Step 1
@@ -109,7 +108,7 @@ export default function SignupPage() {
         interview_types: selectedTypes.length > 0 ? selectedTypes : undefined,
         topic_ids: selectedTopicIds.length > 0 ? selectedTopicIds : undefined,
       });
-      router.push("/dashboard");
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
     } finally {

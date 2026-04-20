@@ -16,6 +16,7 @@ export default function SessionsPage() {
   const [active, setActive] = useState("Upcoming");
   const [sessions, setSessions] = useState<ApiSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     setLoading(true);
@@ -31,7 +32,7 @@ export default function SessionsPage() {
 
   const canReschedule = (scheduledAt: string) => {
     const oneHour = 1000 * 60 * 60;
-    return new Date(scheduledAt).getTime() - Date.now() > oneHour;
+    return new Date(scheduledAt).getTime() - now > oneHour;
   };
 
   return (

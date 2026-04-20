@@ -27,6 +27,7 @@ export default function SessionDetailPage({
   const [session, setSession] = useState<ApiSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [rating, setRating] = useState(0);
@@ -41,7 +42,10 @@ export default function SessionDetailPage({
     sessionsApi
       .get(id)
       .then(setSession)
-      .catch(() => setNotFound(true))
+      .catch((err) => {
+        if (err?.status === 404) setNotFound(true);
+        else setError(true);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -49,7 +53,22 @@ export default function SessionDetailPage({
     return <p className="text-[14px] text-muted-foreground">Loading…</p>;
   }
 
-  if (notFound || !session) {
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-[14px] text-muted-foreground mb-4">
+          Something went wrong. Please try again.
+        </p>
+        <Link href="/sessions">
+          <Button variant="secondary" size="sm">
+            Back
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (notFound || !session || !session.interviewer_id || !session.interviewee_id) {
     return (
       <div className="text-center py-20">
         <p className="text-[14px] text-muted-foreground mb-4">
@@ -69,10 +88,10 @@ export default function SessionDetailPage({
   const partnerBio = isInterviewer ? session.interviewee_bio : session.interviewer_bio;
   const partnerTimezone = isInterviewer ? session.interviewee_timezone : session.interviewer_timezone;
   const partnerCalLink = isInterviewer ? session.interviewee_cal_com_link : session.interviewer_cal_com_link;
-  const scheduled = new Date(session.scheduled_at);
+  const scheduled = session.scheduled_at ? new Date(session.scheduled_at) : null;
 
   const canReschedule =
-    Date.now() < new Date(session.scheduled_at).getTime() - 1000 * 60 * 60;
+    !!scheduled && Date.now() < scheduled.getTime() - 1000 * 60 * 60;
 
   return (
     <div>
@@ -96,9 +115,9 @@ export default function SessionDetailPage({
           </h1>
           <p className="text-[14px] text-muted-foreground">
             {formatDate(session.scheduled_at)} at{" "}
-            {formatTime(
-              `${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`,
-            )}
+            {scheduled
+              ? formatTime(`${scheduled.getHours()}:${String(scheduled.getMinutes()).padStart(2, "0")}`)
+              : "—"}
           </p>
         </div>
       </div>

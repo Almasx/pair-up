@@ -77,6 +77,7 @@ export default function SessionsPage() {
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {sessions.map((session) => {
+            if (!session.interviewer_id || !session.interviewee_id) return null;
             const isInterviewer = session.interviewer_id === user?.id;
             const partnerName = isInterviewer
               ? session.interviewee_name

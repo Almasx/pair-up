@@ -73,6 +73,7 @@ def get_completed_sessions(user_id: str):
 
 
 def get_upcoming_sessions(user_id: str):
+    """Return upcoming confirmed sessions for the given user_id."""
     db = get_db()
     cur = db.cursor()
 
@@ -108,18 +109,21 @@ def get_upcoming_sessions(user_id: str):
 
 
 def _get_user_id_by_email(cur, email: str):
+    """Return the user id for the given email using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM users WHERE email = %s", (email,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def _get_interview_type_id(cur, name: str):
+    """Return the interview type id for the given name using the provided cursor, or None if not found."""
     cur.execute("SELECT id FROM interview_types WHERE name = %s", (name,))
     row = cur.fetchone()
     return row["id"] if row else None
 
 
 def create_session(payload: dict):
+    """Insert a confirmed session from the webhook payload and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -153,6 +157,7 @@ def create_session(payload: dict):
 
 
 def reschedule_session(payload: dict):
+    """Update the scheduled_at time for the session identified by payload uid and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -167,6 +172,7 @@ def reschedule_session(payload: dict):
 
 
 def cancel_session(payload: dict):
+    """Mark the session identified by payload uid as cancelled and commit the transaction."""
     db = get_db()
     cur = db.cursor()
 
@@ -233,6 +239,7 @@ def save_feedback(
     improvements: str = "",
     notes: str = "",
 ):
+    """Insert a feedback row and return the created record."""
     db = get_db()
     cur = db.cursor()
     _ensure_feedback_table(cur)
@@ -262,6 +269,7 @@ def save_feedback(
 
 
 def get_latest_feedback(session_id: str):
+    """Fetch the most recently submitted feedback for a session."""
     db = get_db()
     cur = db.cursor()
     _ensure_feedback_table(cur)

@@ -2,7 +2,6 @@
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { StarRating } from "@/components/ui/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/context/auth";
 import {
@@ -22,6 +21,38 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+
+function ScoreSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[12px] text-muted-foreground block mb-1.5">
+        {label}
+      </span>
+      <select
+        value={value || ""}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full px-3 py-2 text-[14px] bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+      >
+        <option value="" disabled>
+          Select…
+        </option>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export default function SessionDetailPage({
   params,
@@ -287,8 +318,9 @@ export default function SessionDetailPage({
             Feedback
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <StarRating value={feedback.rating} readonly size="sm" />
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <span className="text-[14px] font-medium">{feedback.rating}/5</span>
               <span className="text-[13px] text-muted-foreground">
                 from {feedback.from_user_name}
               </span>
@@ -360,43 +392,27 @@ export default function SessionDetailPage({
                 Leave feedback
               </h2>
               <div className="space-y-5">
-                <div>
-                  <label className="text-[13px] font-medium block mb-2">
-                    Overall
-                  </label>
-                  <StarRating value={rating} onChange={setRating} />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-[12px] text-muted-foreground block mb-1.5">
-                      Communication
-                    </label>
-                    <StarRating
-                      value={communication}
-                      onChange={setCommunication}
-                      size="sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[12px] text-muted-foreground block mb-1.5">
-                      Preparedness
-                    </label>
-                    <StarRating
-                      value={preparedness}
-                      onChange={setPreparedness}
-                      size="sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[12px] text-muted-foreground block mb-1.5">
-                      Technical
-                    </label>
-                    <StarRating
-                      value={technicalSkill}
-                      onChange={setTechnicalSkill}
-                      size="sm"
-                    />
-                  </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <ScoreSelect
+                    label="Overall"
+                    value={rating}
+                    onChange={setRating}
+                  />
+                  <ScoreSelect
+                    label="Communication"
+                    value={communication}
+                    onChange={setCommunication}
+                  />
+                  <ScoreSelect
+                    label="Preparedness"
+                    value={preparedness}
+                    onChange={setPreparedness}
+                  />
+                  <ScoreSelect
+                    label="Technical"
+                    value={technicalSkill}
+                    onChange={setTechnicalSkill}
+                  />
                 </div>
                 <Textarea
                   label="Strengths"
@@ -426,6 +442,7 @@ export default function SessionDetailPage({
                   <Button
                     variant="secondary"
                     onClick={() => setShowFeedback(false)}
+                    disabled={saving}
                   >
                     Cancel
                   </Button>

@@ -1,18 +1,24 @@
 "use client";
-
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { profileApi, type ProfileData } from "@/lib/services/profile";
+import { profileApi, type ProfileData, type Topic, type InterviewType, type Role } from "@/lib/services/profile";
 import { authApi } from "@/lib/services/auth";
 import { calApi } from "@/lib/services/cal";
 import { cn, difficultyLabels, formatDate, interviewTypeLabels } from "@/lib/utils";
-import type { Difficulty } from "@/lib/types";
+import type { Difficulty, UserRole } from "@/lib/types";
 import { ExternalLink, Link2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+
+const roleDisplay: Record<UserRole, string> = {
+  interviewee: "I want to practice",
+  interviewer: "I can run interviews",
+  both: "Interviewer and Interviewee",
+};
 
 const timezones = [
   { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
@@ -24,25 +30,13 @@ const timezones = [
   { value: "Asia/Seoul", label: "Seoul (KST)" },
 ];
 
-const interviewTypes = [
-  { id: "technical", label: "Technical" },
-  { id: "behavioral", label: "Behavioral" },
-  { id: "case", label: "Case Study" },
-  { id: "product", label: "Product" },
-];
-
-const allTopics = [
-  "Data Structures", "Algorithms", "System Design", "Dynamic Programming",
-  "Machine Learning", "Product Sense", "Metrics", "Strategy",
-  "Market Sizing", "Profitability", "Go-to-Market", "Leadership",
-  "Conflict Resolution", "React", "Node.js", "API Design", "Python",
-  "SQL", "Statistics", "Brain Teasers",
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [allInterviewTypes, setAllInterviewTypes] = useState<InterviewType[]>([]);
+  const [allTopics, setAllTopics] = useState<Topic[]>([]);
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -55,22 +49,28 @@ export default function ProfilePage() {
   const [bio, setBio] = useState("");
   const [timezone, setTimezone] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [experience, setExperience] = useState<Difficulty>("intermediate");
+  const [targetRole, setTargetRole] = useState("");
   const [schedulingUrl, setSchedulingUrl] = useState("");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("both");
 
   useEffect(() => {
-    profileApi
-      .getMe()
-      .then((data) => {
+    Promise.all([profileApi.getMe(), profileApi.getTopics(), profileApi.getInterviewTypes(), profileApi.getRoles()])
+      .then(([data, topics, interviewTypes, roles]) => {
         setProfile(data);
+        setAllTopics(topics);
+        setAllInterviewTypes(interviewTypes);
+        setAllRoles(roles);
         setName(data.full_name);
         setBio(data.bio ?? "");
         setTimezone(data.timezone ?? "");
         setSelectedTypes(data.interview_types ?? []);
-        setSelectedTopics(data.topics ?? []);
+        setSelectedTopicIds((data.topics ?? []).map((t) => t.id));
         setExperience((data.experience as Difficulty) ?? "intermediate");
+        setTargetRole(data.target_role ?? "");
         setSchedulingUrl(data.cal_com_link ?? "");
+        setSelectedRole(data.role ?? "both");
       })
       .catch(() => setError("Failed to load profile"))
       .finally(() => setLoading(false));
@@ -82,10 +82,18 @@ export default function ProfilePage() {
     setBio(profile.bio ?? "");
     setTimezone(profile.timezone ?? "");
     setSelectedTypes(profile.interview_types ?? []);
-    setSelectedTopics(profile.topics ?? []);
+    setSelectedTopicIds((profile.topics ?? []).map((t) => t.id));
     setExperience((profile.experience as Difficulty) ?? "intermediate");
+    setTargetRole(profile.target_role ?? "");
     setSchedulingUrl(profile.cal_com_link ?? "");
+    setSelectedRole(profile.role ?? "both");
     setEditing(true);
+  }
+
+  async function handleTargetRoleSave() {
+    if (!profile || targetRole === profile.target_role) return;
+    const updated = await profileApi.updateMe({ target_role: targetRole });
+    setProfile(updated);
   }
 
   async function handleSave() {
@@ -96,9 +104,10 @@ export default function ProfilePage() {
         bio,
         timezone,
         interview_types: selectedTypes,
-        topics: selectedTopics,
+        topic_ids: selectedTopicIds,
         experience,
         cal_com_link: schedulingUrl,
+        role: selectedRole,
       });
       setProfile(updated);
       setEditing(false);
@@ -124,9 +133,9 @@ export default function ProfilePage() {
       prev.includes(id) ? prev.filter((t: string) => t !== id) : [...prev, id]
     );
 
-  const toggleTopic = (topic: string) =>
-    setSelectedTopics((prev: string[]) =>
-      prev.includes(topic) ? prev.filter((t: string) => t !== topic) : [...prev, topic]
+  const toggleTopic = (id: string) =>
+    setSelectedTopicIds((prev: string[]) =>
+      prev.includes(id) ? prev.filter((t: string) => t !== id) : [...prev, id]
     );
 
   if (loading) {
@@ -220,22 +229,43 @@ export default function ProfilePage() {
         {editing ? (
           <div className="space-y-6">
             <div>
+              <label className="text-[13px] font-medium block mb-2">Role</label>
+              <div className="flex flex-col gap-2">
+                {allRoles.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setSelectedRole(r.name)}
+                    className={cn(
+                      "text-left px-4 py-3 rounded-xl border transition-all cursor-pointer",
+                      selectedRole === r.name
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-card hover:border-foreground/30"
+                    )}
+                  >
+                    <p className={cn("text-[13px] font-medium", selectedRole === r.name ? "text-background" : "text-foreground")}>
+                      {roleDisplay[r.name]}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <label className="text-[13px] font-medium block mb-2">
                 Interview types
               </label>
               <div className="flex flex-wrap gap-2">
-                {interviewTypes.map((type) => (
+                {allInterviewTypes.map((type) => (
                   <button
                     key={type.id}
-                    onClick={() => toggleType(type.id)}
+                    onClick={() => toggleType(type.name)}
                     className={cn(
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
-                      selectedTypes.includes(type.id)
+                      selectedTypes.includes(type.name)
                         ? "border-foreground bg-foreground text-background"
                         : "border-border text-muted-foreground hover:border-foreground/30"
                     )}
                   >
-                    {type.label}
+                    {type.name}
                   </button>
                 ))}
               </div>
@@ -258,16 +288,16 @@ export default function ProfilePage() {
               <div className="flex flex-wrap gap-2">
                 {allTopics.map((topic) => (
                   <button
-                    key={topic}
-                    onClick={() => toggleTopic(topic)}
+                    key={topic.id}
+                    onClick={() => toggleTopic(topic.id)}
                     className={cn(
                       "px-3 py-1.5 text-[13px] font-medium rounded-lg border transition-all cursor-pointer",
-                      selectedTopics.includes(topic)
+                      selectedTopicIds.includes(topic.id)
                         ? "border-foreground bg-foreground text-background"
                         : "border-border text-muted-foreground hover:border-foreground/30"
                     )}
                   >
-                    {topic}
+                    {topic.name}
                   </button>
                 ))}
               </div>
@@ -275,6 +305,12 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {profile.role && (
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-1.5">Role</p>
+                <p className="text-[14px] font-medium capitalize">{profile.role}</p>
+              </div>
+            )}
             {profile.interview_types.length > 0 && (
               <div>
                 <p className="text-[12px] text-muted-foreground mb-1.5">
@@ -308,10 +344,10 @@ export default function ProfilePage() {
                 <div className="flex flex-wrap gap-1.5">
                   {profile.topics.map((t) => (
                     <span
-                      key={t}
+                      key={t.id}
                       className="px-2 py-0.5 text-[12px] bg-muted rounded-md"
                     >
-                      {t}
+                      {t.name}
                     </span>
                   ))}
                 </div>
@@ -319,6 +355,24 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+      </section>
+
+      {/* Relevant opportunities */}
+      <section className="mb-10">
+        <h2 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+          Relevant opportunities
+        </h2>
+        <p className="text-[12px] text-muted-foreground mb-3">
+          A role you're targeting or relevant experience — e.g. Meta SWE intern, ex-Google PM
+        </p>
+        <input
+          type="text"
+          placeholder="e.g. Meta SWE internship"
+          value={targetRole}
+          onChange={(e) => setTargetRole(e.target.value)}
+          onBlur={handleTargetRoleSave}
+          className="w-full px-3 py-2.5 text-[14px] bg-card border border-border rounded-xl placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+        />
       </section>
 
       {/* Upcoming sessions */}
@@ -329,9 +383,10 @@ export default function ProfilePage() {
           </h2>
           <div className="flex flex-col divide-y divide-border">
             {profile.upcoming_sessions.map((session) => (
-              <div
+              <Link
                 key={session.id}
-                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                href={`/sessions/${session.id}`}
+                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:opacity-80 transition-opacity"
               >
                 <Avatar name={session.partner_name} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -346,12 +401,13 @@ export default function ProfilePage() {
                     href={session.meeting_link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="text-[12px] text-muted-foreground hover:text-foreground"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         </section>

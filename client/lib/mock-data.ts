@@ -1,7 +1,6 @@
 import type {
   User,
   Session,
-  Notification,
 } from "./types";
 
 export const currentUser: User = {
@@ -15,7 +14,6 @@ export const currentUser: User = {
   topics: ["Data Structures", "System Design", "Dynamic Programming"],
   experienceLevel: "intermediate",
   completedSessions: 12,
-  rating: 4.8,
   joinedAt: "2025-09-15",
   schedulingUrl: "https://calendly.com/alexchen",
 };
@@ -33,7 +31,6 @@ export const users: User[] = [
     topics: ["Product Sense", "Metrics", "Strategy"],
     experienceLevel: "advanced",
     completedSessions: 24,
-    rating: 4.9,
     joinedAt: "2025-08-01",
     schedulingUrl: "https://calendly.com/priyasharma",
   },
@@ -48,7 +45,6 @@ export const users: User[] = [
     topics: ["Market Sizing", "Profitability", "Go-to-Market"],
     experienceLevel: "advanced",
     completedSessions: 31,
-    rating: 4.7,
     joinedAt: "2025-07-20",
     schedulingUrl: "https://cal.com/marcusjohnson",
   },
@@ -63,7 +59,6 @@ export const users: User[] = [
     topics: ["Machine Learning", "System Design", "Python", "Statistics"],
     experienceLevel: "intermediate",
     completedSessions: 8,
-    rating: 4.6,
     joinedAt: "2025-10-01",
     schedulingUrl: "https://calendly.com/yukitanaka",
   },
@@ -78,7 +73,6 @@ export const users: User[] = [
     topics: ["React", "Node.js", "System Design", "API Design"],
     experienceLevel: "intermediate",
     completedSessions: 15,
-    rating: 4.8,
     joinedAt: "2025-09-01",
   },
   {
@@ -92,7 +86,6 @@ export const users: User[] = [
     topics: ["Algorithms", "Probability", "Brain Teasers", "Dynamic Programming"],
     experienceLevel: "advanced",
     completedSessions: 19,
-    rating: 4.9,
     joinedAt: "2025-08-15",
     schedulingUrl: "https://cal.com/danielkim",
   },
@@ -139,7 +132,6 @@ export const sessions: Session[] = [
       sessionId: "ses3",
       fromUser: users[5],
       toUser: currentUser,
-      rating: 4,
       communication: 5,
       preparedness: 4,
       technicalSkill: 4,
@@ -161,35 +153,5 @@ export const sessions: Session[] = [
     scheduledAt: "2026-02-15T11:00:00Z",
     meetingLink: "https://meet.google.com/efg-hijk-lmn",
     status: "completed",
-  },
-];
-
-export const notifications: Notification[] = [
-  {
-    id: "n2",
-    type: "session_reminder",
-    title: "Session tomorrow",
-    message: "Product Sense mock with Priya Sharma at 10:00 AM",
-    read: false,
-    createdAt: "2026-02-22T08:00:00Z",
-    actionUrl: "/sessions/ses1",
-  },
-  {
-    id: "n3",
-    type: "feedback_received",
-    title: "Feedback received",
-    message: "Daniel Kim left feedback on your session",
-    read: true,
-    createdAt: "2026-02-18T16:15:00Z",
-    actionUrl: "/sessions/ses3",
-  },
-  {
-    id: "n4",
-    type: "match_accepted",
-    title: "Match confirmed",
-    message: "Your session with Priya Sharma is confirmed",
-    read: true,
-    createdAt: "2026-02-20T14:00:00Z",
-    actionUrl: "/sessions/ses1",
   },
 ];

@@ -1,3 +1,5 @@
+import type { UserRole } from "@/lib/types";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
 export type UpcomingSession = {
@@ -9,6 +11,22 @@ export type UpcomingSession = {
   partner_name: string;
 };
 
+export type InterviewType = {
+  id: string;
+  name: string;
+};
+
+export type Role = {
+  id: string;
+  name: UserRole;
+};
+
+export type Topic = {
+  id: string;
+  name: string;
+  interview_type_id: string;
+};
+
 export type ProfileData = {
   id: string;
   full_name: string;
@@ -18,9 +36,10 @@ export type ProfileData = {
   bio: string;
   cal_com_link: string;
   cal_webhook_id: string | null;
-  role: string;
+  role: UserRole;
+  target_role: string;
   interview_types: string[];
-  topics: string[];
+  topics: Topic[];
   upcoming_sessions: UpcomingSession[];
   created_at: string;
 };
@@ -41,11 +60,19 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 export const profileApi = {
   getMe: () => apiFetch<ProfileData>("/profiles/me"),
 
-  updateMe: (body: Partial<ProfileData>) =>
+  updateMe: (body: Partial<ProfileData> & { topic_ids?: string[] }) =>
     apiFetch<ProfileData>("/profiles/me", {
       method: "PUT",
       body: JSON.stringify(body),
     }),
 
   getPublic: (userId: string) => apiFetch<ProfileData>(`/profiles/${userId}`),
+
+  getInterviewTypes: () => apiFetch<InterviewType[]>("/profiles/interview-types"),
+
+  getTopics: () => apiFetch<Topic[]>("/profiles/topics"),
+
+  getRoles: () => apiFetch<Role[]>("/profiles/roles"),
+
+  getUsers: () => apiFetch<ProfileData[]>("/profiles/"),
 };

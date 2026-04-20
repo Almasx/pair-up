@@ -1,13 +1,30 @@
+import os
+import uuid
+
 from src.db import get_db
 from src.supabase_client import get_supabase
 
 
 def signup(
-    full_name, email, password, timezone, experience=None, bio=None, cal_com_link=None
+    full_name, email, password, timezone, role,
+    experience=None, bio=None, cal_com_link=None,
+    interview_types=None, topic_ids=None,
 ):
-    """Create Supabase Auth user + insert into users table. Returns (user_dict, error)."""
+    """Create Supabase Auth user + insert into users table.
+
+    Returns (user_dict, error).
+    """
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id FROM roles WHERE name = %s", (role,))
+    role_row = cur.fetchone()
+    if not role_row:
+        return None, f"Invalid role: {role}"
+    role_id = role_row["id"]
+
     sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.sign_up(
             {
                 "email": email,
@@ -32,20 +49,46 @@ def signup(
     if not response.session:
         return None, "Signup failed — no session returned"
 
-    access_token = response.session.access_token if response.session else None
-    refresh_token = response.session.refresh_token if response.session else None
+    access_token = (
+        response.session.access_token if response.session else None
+    )
+    refresh_token = (
+        response.session.refresh_token if response.session else None
+    )
 
     user_id = response.user.id
 
-    db = get_db()
-    cur = db.cursor()
     cur.execute(
         """
-        INSERT INTO users (id, full_name, email, timezone, experience, bio, cal_com_link)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO users
+            (id, full_name, email, timezone, experience, bio, cal_com_link, role_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """,
-        (user_id, full_name, email, timezone, experience, bio, cal_com_link),
+        (user_id, full_name, email, timezone, experience, bio, cal_com_link, role_id),
     )
+
+    if interview_types:
+        for name in interview_types:
+            cur.execute(
+                """
+                INSERT INTO user_interview_types (user_id, interview_type_id)
+                SELECT %s, id FROM interview_types WHERE name = %s
+                ON CONFLICT DO NOTHING
+                """,
+                (user_id, name),
+            )
+
+    if topic_ids:
+        for topic_id in topic_ids:
+            cur.execute(
+                """
+                INSERT INTO user_topics (user_id, topic_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+                """,
+                (user_id, topic_id),
+            )
+
     db.commit()
 
     return {
@@ -59,14 +102,15 @@ def signup(
             "experience": experience,
             "bio": bio,
             "cal_com_link": cal_com_link,
+            "role": role,
         },
     }, None
 
 
 def login(email, password):
     """Sign in with Supabase Auth, fetch profile from users table. Returns (data_dict, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.sign_in_with_password(
             {
                 "email": email,
@@ -98,8 +142,8 @@ def login(email, password):
 
 def logout(access_token):
     """Sign out from Supabase Auth. Returns (None, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         sb.auth.sign_out()
         return None, None
     except Exception as e:
@@ -108,8 +152,8 @@ def logout(access_token):
 
 def refresh(refresh_token):
     """Refresh the session. Returns (tokens_dict, error)."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         response = sb.auth.refresh_session(refresh_token)
     except Exception as e:
         return None, str(e)

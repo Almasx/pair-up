@@ -19,6 +19,11 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+@webhooks_bp.route("/test", methods=["GET"])
+def test():
+    return {"message": "hello world"}, 200
+
+
 @webhooks_bp.route("/cal", methods=["POST"])
 def cal_webhook():
     secret = current_app.config.get("CAL_WEBHOOK_SECRET", "")
